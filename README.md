@@ -25,14 +25,7 @@ Users configure the environment interactively using a Streamlit UI and visualize
 
 ## 🏗️ System Architecture
 
-```mermaid
-graph TD
-    A[User Interface (Streamlit)] -->|Inputs: Start/Goal, Wind, Obstacles| B[Environment Module]
-    B -->|Generates: 3D Grid & Wind Field| C[Route Planner]
-    C -->|Algorithm: A* Search| D[Path Optimization]
-    D -->|Returns: Waypoints| A
-    A -->|Renders| E[3D Visualization (Plotly)]
-```
+![System Architecture](images/architecture_diagram.png)
 
 ---
 
