@@ -94,11 +94,13 @@ Users configure the environment interactively using a Streamlit UI and visualize
 
 ## 📸 Demo & Screenshots
 
-### **1. Setup Interface**
-*(Save screenshot as `images/demo_setup.png`)*
+### 1. Setup Interface
 
-### **2. 3D Trajectory Visualization**
-*(Save screenshot as `images/demo_path.png`)*
+![Simulation Setup](images/demo_setup.png)
+
+### 2. 3D Trajectory Visualization
+
+![3D Trajectory Visualization](images/demo_path.png)
 
 ---
 
