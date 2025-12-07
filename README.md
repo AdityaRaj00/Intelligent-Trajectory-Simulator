@@ -3,9 +3,6 @@
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/frontend-streamlit-red.svg)](https://streamlit.io/)
 [![Plotly](https://img.shields.io/badge/visualization-plotly-green.svg)](https://plotly.com/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/yourusername/uas-trajectory-optimizer/ci.yml?branch=main&label=build)](https://github.com/yourusername/uas-trajectory-optimizer/actions)
-[![License](https://img.shields.io/github/license/yourusername/uas-trajectory-optimizer.svg)](LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/yourusername/uas-trajectory-optimizer/total.svg)](https://github.com/yourusername/uas-trajectory-optimizer/releases)
 
 **A 3D path-planning simulator that computes the most energy-efficient trajectory for Unmanned Aerial Systems (UAS) in a complex urban environment.**
 
