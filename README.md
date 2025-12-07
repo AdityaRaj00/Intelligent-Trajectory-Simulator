@@ -23,9 +23,45 @@ Users configure the environment interactively using a Streamlit UI and visualize
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture (ASCII Diagram)
 
-![System Architecture](images/architecture_diagram.png)
+```
+                  +----------------------------------+
+                  |   User Interface (Streamlit)      |
+                  | - Takes Start/Goal                |
+                  | - Wind Settings                   |
+                  | - Obstacle Builder                |
+                  +-----------------+------------------+
+                                    |
+                                    | Inputs
+                                    v
+                   +----------------+----------------+
+                   |          Environment Module     |
+                   | (environment.py)                |
+                   | - Builds 3D Grid                |
+                   | - Applies Wind Field            |
+                   | - Stores Obstacles              |
+                   +----------------+----------------+
+                                    |
+                                    | Grid + Wind Field
+                                    v
+                     +--------------+---------------+
+                     |            Route Planner     |
+                     |          (planner.py)        |
+                     | - 26-direction A* Search     |
+                     | - Energy Cost Model          |
+                     | - Gravity + Wind Effects     |
+                     +--------------+---------------+
+                                    |
+                                    | Optimal Path (waypoints)
+                                    v
+             +----------------------+------------------------+
+             |           3D Visualization (Plotly)           |
+             | - Renders Obstacles                           |
+             | - Renders Optimal Path                        |
+             | - Interactive 3D Controls                     |
+             +-----------------------------------------------+
+```
 
 ---
 
