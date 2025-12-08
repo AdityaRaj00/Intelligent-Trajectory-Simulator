@@ -112,6 +112,15 @@ Users configure the environment interactively using a Streamlit UI and visualize
 - Start & Goal markers  
 
 ---
+## 🛠️ Tech Stack
+
+- **Language:** Python 3.x  
+- **Frontend:** Streamlit  
+- **Visualization:** Plotly  
+- **Math & Arrays:** NumPy  
+- **Algorithms:** `heapq` (priority queue for A*)  
+
+---
 
 ## 📂 Project Structure
 
