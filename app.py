@@ -3,13 +3,40 @@ import plotly.graph_objects as go
 import numpy as np
 import random
 import io
-import csv
+import time
 from environment import Airspace
 from planner import RoutePlanner
 
 # --- Page Configuration ---
 st.set_page_config(page_title="Intelligent Trajectory Simulator", layout="wide")
 st.title("🚁 3D Trajectory Optimizer for UAS")
+
+# --- Compatibility helper for rerun across Streamlit versions ---
+def safe_rerun():
+    """Call the appropriate Streamlit rerun API for the installed version.
+    If neither is available, set a query param and ask the user to refresh."""
+    # Preferred: new API
+    if hasattr(st, "rerun"):
+        try:
+            st.rerun()
+            return
+        except Exception:
+            pass
+
+    # Fallback: older experimental name
+    if hasattr(st, "experimental_rerun"):
+        try:
+            st.experimental_rerun()
+            return
+        except Exception:
+            pass
+
+    # Last resort: change a query param as a soft hint and ask the user
+    try:
+        st.experimental_set_query_params(_r=int(time.time()))
+        st.info("Please refresh the page to complete the action.")
+    except Exception:
+        st.info("Please refresh the page to continue.")
 
 # --- Initialize Session State ---
 if 'custom_obstacles' not in st.session_state:
@@ -30,9 +57,12 @@ with st.sidebar:
     wind_dir = st.slider("Wind Direction (°)", 0, 360, 180, help="0=East, 90=North, 180=West")
 
     direction_text = "➡️ East (+X)"
-    if 45 < wind_dir <= 135: direction_text = "⬆️ North (+Y)"
-    elif 135 < wind_dir <= 225: direction_text = "⬅️ West (-X)"
-    elif 225 < wind_dir <= 315: direction_text = "⬇️ South (-Y)"
+    if 45 < wind_dir <= 135:
+        direction_text = "⬆️ North (+Y)"
+    elif 135 < wind_dir <= 225:
+        direction_text = "⬅️ West (-X)"
+    elif 225 < wind_dir <= 315:
+        direction_text = "⬇️ South (-Y)"
     st.caption(f"Wind Blowing: {direction_text}")
 
     # --- Physics Section ---
@@ -50,17 +80,30 @@ with st.sidebar:
         goal_x = st.number_input("Goal X", 0, grid_size-1, grid_size-2)
         goal_y = st.number_input("Goal Y", 0, grid_size-1, grid_size-2)
 
+# --- Helper: serialize obstacles for caching ---
+def serialize_obstacles(obstacles):
+    """Convert list-of-dicts into a tuple-of-tuples (hashable) in stable order."""
+    serialized = []
+    for o in obstacles:
+        # ensure consistent key order
+        serialized.append((o.get('x', 0), o.get('y', 0), o.get('dx', 0), o.get('dy', 0), o.get('dz', 0)))
+    return tuple(serialized)
+
+def deserialize_obstacles(serialized):
+    """Convert serialized obstacles back to list of dicts."""
+    return [{'x': t[0], 'y': t[1], 'dx': t[2], 'dy': t[3], 'dz': t[4]} for t in serialized]
+
 # --- Helper: create sample scenarios ---
 def load_sample(name):
     st.session_state.custom_obstacles = []
     if name == 'City (dense)':
-        for i in range(5, 25, 4):
-            for j in range(5, 25, 4):
+        for i in range(5, min(grid_size, 25), 4):
+            for j in range(5, min(grid_size, 25), 4):
                 st.session_state.custom_obstacles.append({'x': i, 'y': j, 'dx': 3, 'dy': 3, 'dz': random.randint(6, 14)})
     elif name == 'Sparse Field':
         for _ in range(8):
-            rx = random.randint(0, grid_size-5)
-            ry = random.randint(0, grid_size-5)
+            rx = random.randint(0, max(0, grid_size-5))
+            ry = random.randint(0, max(0, grid_size-5))
             st.session_state.custom_obstacles.append({'x': rx, 'y': ry, 'dx': random.randint(2,4), 'dy': random.randint(2,4), 'dz': random.randint(5,12)})
 
 # --- Main Layout ---
@@ -81,7 +124,7 @@ with col_builder:
             h = st.number_input("Height (Z)", 1, 15, 10)
 
             if st.form_submit_button("➕ Add Single"):
-                st.session_state.custom_obstacles.append({'x': ox, 'y': oy, 'dx': w, 'dy': l, 'dz': h})
+                st.session_state.custom_obstacles.append({'x': int(ox), 'y': int(oy), 'dx': int(w), 'dy': int(l), 'dz': int(h)})
                 st.success("Building Added!")
 
     with tab2:
@@ -91,39 +134,41 @@ with col_builder:
             max_h = st.number_input("Max Height", 5, 20, 12)
 
             if st.form_submit_button("🎲 Generate"):
-                for _ in range(num_rand):
-                    rx = random.randint(0, grid_size-5)
-                    ry = random.randint(0, grid_size-5)
+                for _ in range(int(num_rand)):
+                    rx = random.randint(0, max(0, grid_size-5))
+                    ry = random.randint(0, max(0, grid_size-5))
                     rw = random.randint(2, 5)
                     rl = random.randint(2, 5)
-                    rh = random.randint(5, max_h)
+                    rh = random.randint(5, int(max_h))
                     st.session_state.custom_obstacles.append({'x': rx, 'y': ry, 'dx': rw, 'dy': rl, 'dz': rh})
                 st.success(f"Added {num_rand} buildings.")
 
     st.divider()
     # Sample scenarios
-    sample = st.selectbox("Load sample scenario", ["(none)", "City (dense)", "Sparse Field"]) 
+    sample = st.selectbox("Load sample scenario", ["(none)", "City (dense)", "Sparse Field"])
     if st.button("Load Sample") and sample != "(none)":
         load_sample(sample)
-        st.experimental_rerun()
+        safe_rerun()
 
     # Manage Existing Obstacles
     if st.session_state.custom_obstacles:
         st.write(f"**Total Buildings:** {len(st.session_state.custom_obstacles)}")
         if st.button("🗑️ Clear Map", type="secondary"):
             st.session_state.custom_obstacles = []
-            st.rerun()
+            safe_rerun()
 
 # --- Simulation core wrapped and cached ---
 @st.cache_data
-def run_simulation_cached(grid_size, wind_alt, wind_speed, wind_dir, climb_cost, safety_penalty, obstacles, start_node, goal_node):
+def run_simulation_cached(grid_size, wind_alt, wind_speed, wind_dir, climb_cost, safety_penalty, obstacles_serialized, start_node, goal_node):
+    # reconstruct obstacles
+    obstacles = deserialize_obstacles(obstacles_serialized)
     env = Airspace(size=(grid_size, grid_size, 20))
     env.set_wind(z_level=wind_alt, intensity=wind_speed, direction_degrees=wind_dir)
 
     # Place obstacles into grid
     for obs in obstacles:
-        x, y, dx, dy, h = obs['x'], obs['y'], obs['dx'], obs['dy'], obs['dz']
-        if x+dx <= grid_size and y+dy <= grid_size:
+        x, y, dx, dy, h = int(obs['x']), int(obs['y']), int(obs['dx']), int(obs['dy']), int(obs['dz'])
+        if x + dx <= grid_size and y + dy <= grid_size:
             env.grid[x:x+dx, y:y+dy, 0:h] = 1
 
     planner = RoutePlanner(env, {
@@ -143,7 +188,18 @@ with col_viz:
                 start_node = (int(start_x), int(start_y), 0)
                 goal_node = (int(goal_x), int(goal_y), 5)
 
-                env, path = run_simulation_cached(grid_size, wind_alt, wind_speed, wind_dir, climb_cost, safety_penalty, tuple([tuple(sorted(o.items())) for o in st.session_state.custom_obstacles]), start_node, goal_node) if False else run_simulation_cached(grid_size, wind_alt, wind_speed, wind_dir, climb_cost, safety_penalty, st.session_state.custom_obstacles, start_node, goal_node)
+                obstacles_serialized = serialize_obstacles(st.session_state.custom_obstacles)
+                env, path = run_simulation_cached(
+                    int(grid_size),
+                    int(wind_alt),
+                    float(wind_speed),
+                    int(wind_dir),
+                    float(climb_cost),
+                    float(safety_penalty),
+                    obstacles_serialized,
+                    start_node,
+                    goal_node
+                )
 
                 # Visualization using Plotly 3D
                 fig = go.Figure()
@@ -152,7 +208,7 @@ with col_viz:
                 fig.add_trace(go.Scatter3d(
                     x=obs_x, y=obs_y, z=obs_z,
                     mode='markers',
-                    marker=dict(symbol='square', size=5, color='gray', opacity=0.4),
+                    marker=dict(symbol='square', size=5, opacity=0.4),
                     name='Buildings'
                 ))
 
@@ -169,14 +225,15 @@ with col_viz:
                     st.session_state.last_path = path
                 else:
                     st.error("❌ No path found! The destination is unreachable or blocked.")
+                    st.session_state.last_path = None
 
                 # DRAW START & GOAL
                 fig.add_trace(go.Scatter3d(
-                    x=[start_x], y=[start_y], z=[0],
+                    x=[int(start_x)], y=[int(start_y)], z=[0],
                     mode='markers', marker=dict(size=10, color='green'), name='Start'
                 ))
                 fig.add_trace(go.Scatter3d(
-                    x=[goal_x], y=[goal_y], z=[5],
+                    x=[int(goal_x)], y=[int(goal_y)], z=[5],
                     mode='markers', marker=dict(size=10, color='blue'), name='Goal'
                 ))
 
@@ -202,8 +259,12 @@ with col_viz:
     st.divider()
     st.subheader("📥 Output & Export")
     if st.session_state.last_path:
-        if st.download_button("Download Path CSV", data=io.StringIO('\n'.join([','.join(map(str,p)) for p in st.session_state.last_path])), file_name="trajectory.csv", mime="text/csv"):
-            pass
+        # Create CSV text
+        csv_lines = ["x,y,z"]
+        csv_lines += [f"{p[0]},{p[1]},{p[2]}" for p in st.session_state.last_path]
+        csv_text = "\n".join(csv_lines)
+
+        st.download_button("Download Path CSV", data=csv_text, file_name="trajectory.csv", mime="text/csv")
 
         if st.button("Show Path Points"):
             st.write(st.session_state.last_path)
