@@ -1,28 +1,19 @@
 import streamlit as st
 from streamlit.components.v1 import html
 
-ga_code = """
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-9D24G48BZT"></script>
+google_tag_code = """
+<!-- Google tag -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=GT-T566DRTX"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-
   gtag('js', new Date());
 
-  gtag('config', 'G-9D24G48BZT', {
-    'send_page_view': false
-  });
-  setTimeout(function() {
-    gtag('event', 'streamlit_page_loaded', {
-      'event_category': 'engagement',
-      'event_label': 'trajectory_simulator'
-    });
-  }, 1000);
+  gtag('config', 'GT-T566DRTX');
 </script>
 """
 
-html(ga_code, height=0)
-
+html(google_tag_code, height=0)
 
 import plotly.graph_objects as go
 import numpy as np
